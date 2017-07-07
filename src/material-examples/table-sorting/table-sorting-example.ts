@@ -85,28 +85,22 @@ export class ExampleDataSource extends DataSource<any> {
 
   /** Connect function called by the table to retrieve one stream containing the data to render. */
   connect(): Observable<UserData[]> {
-    const displayDataChanges = [
-      this._exampleDatabase.dataChange,
-      this._sort.mdSortChange,
-    ];
-
-    return Observable.merge(...displayDataChanges).map(() => {
-      return this.getSortedData();
+    return this._exampleDatabase.dataChange.combineLatest(this._sort.mdSortChange, (data: UserData[], sort: Sort) => {
+      return this.getSortedData(data.slice(), sort);
     });
   }
 
   disconnect() {}
 
   /** Returns a sorted copy of the database data. */
-  getSortedData(): UserData[] {
-    const data = this._exampleDatabase.data.slice();
-    if (!this._sort.active || this._sort.direction == '') { return data; }
+  getSortedData(data: UserData[], sort: Sort): UserData[] {
+    if (!sort.active || sort.direction == '') { return data; }
 
     return data.sort((a, b) => {
       let propertyA: number|string = '';
       let propertyB: number|string = '';
 
-      switch (this._sort.active) {
+      switch (sort.active) {
         case 'userId': [propertyA, propertyB] = [a.id, b.id]; break;
         case 'userName': [propertyA, propertyB] = [a.name, b.name]; break;
         case 'progress': [propertyA, propertyB] = [a.progress, b.progress]; break;
@@ -116,7 +110,7 @@ export class ExampleDataSource extends DataSource<any> {
       let valueA = isNaN(+propertyA) ? propertyA : +propertyA;
       let valueB = isNaN(+propertyB) ? propertyB : +propertyB;
 
-      return (valueA < valueB ? -1 : 1) * (this._sort.direction == 'asc' ? 1 : -1);
+      return (valueA < valueB ? -1 : 1) * (sort.direction == 'asc' ? 1 : -1);
     });
   }
 }
